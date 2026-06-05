@@ -1,42 +1,47 @@
-// api/exchangeToken.js
-export default async function handler(req, res) {
-  // 1. Security Check: Only allow POST requests
-  if (req.method !== 'POST') {
-    return res.status(405).send('Method Not Allowed');
-  }
-  
-  // 2. Extract the data sent by your React frontend
-  const { code, code_verifier, redirect_uri } = req.body;
-  
-  // 3. Your specific Bynex Trader App ID
+import React from 'react';
+import { generateRandomString, generateCodeChallenge } from './utils/pkce';
+
+export default function Login() {
   const APP_ID = "32FjINZV8sXfdKQcVvnZf"; 
+  const AFFILIATE_ID = "ryvn0GECp3Koq-Eo5YYlgWNd7ZgqdRLk"; 
+  
+  // Use your exact live Vercel URL
+  const REDIRECT_URI = "https://notebookbinary2026.vercel.app/redirect"; 
 
-  try {
-    // 4. Securely call Deriv's Token Endpoint
-    const response = await fetch('https://auth.deriv.com/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: APP_ID,
-        grant_type: 'authorization_code',
-        code: code,
-        code_verifier: code_verifier,
-        redirect_uri: redirect_uri
-      })
-    });
+  const handleAuth = async (isSignup = false) => {
+    const state = generateRandomString(32);
+    const codeVerifier = generateRandomString(64);
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-    const data = await response.json();
+    sessionStorage.setItem('oauth_state', state);
+    sessionStorage.setItem('pkce_verifier', codeVerifier);
 
-    // 5. Check for Deriv errors (like an expired code)
-    if (!response.ok) {
-      throw new Error(data.error_description || 'Token exchange failed');
+    const authUrl = new URL("https://auth.deriv.com/oauth2/auth");
+    authUrl.searchParams.append("response_type", "code");
+    authUrl.searchParams.append("client_id", APP_ID);
+    authUrl.searchParams.append("redirect_uri", REDIRECT_URI);
+    authUrl.searchParams.append("scope", "trade account_manage"); 
+    authUrl.searchParams.append("state", state);
+    authUrl.searchParams.append("code_challenge", codeChallenge);
+    authUrl.searchParams.append("code_challenge_method", "S256");
+
+    // Perfected Affiliate Tracking Flow
+    if (isSignup) {
+      authUrl.searchParams.append("prompt", "registration"); 
+      authUrl.searchParams.append("utm_source", AFFILIATE_ID); 
+      authUrl.searchParams.append("sidc", AFFILIATE_ID); 
+      authUrl.searchParams.append("utm_medium", "affiliate"); 
+      authUrl.searchParams.append("utm_campaign", "bynex_telegram_bot"); 
     }
-    
-    // 6. Send the final access token securely back to your React app
-    res.status(200).json({ access_token: data.access_token });
-    
-  } catch (error) {
-    // Return any errors cleanly
-    res.status(500).json({ error: error.message });
-  }
+
+    window.location.href = authUrl.toString();
+  };
+
+  return (
+    <div style={{ padding: '50px', textAlign: 'center' }}>
+      <h1>Bynex Trader</h1>
+      <button onClick={() => handleAuth(false)}>Log In</button>
+      <button onClick={() => handleAuth(true)}>Create Affiliate Account</button>
+    </div>
+  );
 }
