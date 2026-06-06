@@ -43,7 +43,7 @@ export default function Redirect() {
         if (data.access_token) {
           localStorage.setItem('deriv_token', data.access_token);
           navigate('/dashboard');
-        } else {s
+        } else {
           alert("Token exchange failed: " + (data.error || "Unknown error"));
         }
       } catch (err) {
@@ -56,4 +56,4 @@ export default function Redirect() {
   }, [navigate]);
 
   return <h2 style={{ textAlign: 'center', marginTop: '50px' }}>Authenticating with Deriv...</h2>;
-}s
+}
